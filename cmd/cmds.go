@@ -3,19 +3,31 @@ package cmd
 import (
 	"log"
 	"fmt"
+	"os"
+
 	"github.com/kuking/jbov"
 	"github.com/spf13/cobra"
 )
 
+var Verbose bool
+var YesMan bool
+var DryRun bool
+
 func RegisterCommands() {
 	RootCmd.AddCommand(versionCmd)
+	RootCmd.AddCommand(createCmd)
 	RootCmd.AddCommand(mountCmd)
 	RootCmd.AddCommand(checkCmd)
 	RootCmd.AddCommand(syncCmd)
 	RootCmd.AddCommand(setCmd)
 	RootCmd.AddCommand(statsCmd)
 	RootCmd.AddCommand(rebalanceCmd)
-	RootCmd.AddCommand(ruleCmd)
+
+	RegisterRuleCommands(RootCmd)
+
+	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Verbose output")
+	RootCmd.PersistentFlags().BoolVarP(&YesMan, "yes", "y", false, "Automatically answers yes (dangerous)")
+	RootCmd.PersistentFlags().BoolVarP(&YesMan, "dry-run", "n", false, "Shows what would be done, without applying any change.")
 }
 
 // DoitCmd is the base command.
@@ -29,6 +41,23 @@ var versionCmd = &cobra.Command{
 	Short: "Print the version number of jbov",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(jbov.FullName, jbov.Version)
+	},
+}
+
+var createCmd = &cobra.Command{
+	Use:   "create name [vol_alias:/path]...",
+	Short: "Creates a new a jbov",
+	Run: func(cmd *cobra.Command, args []string) {
+
+		if (len(args)<2) {
+			fmt.Println("Error: you need at least two parameters, the jbov name and at least one initial volume.")
+			os.Exit(-1)
+		}
+
+
+
+
+
 	},
 }
 
@@ -80,11 +109,3 @@ var rebalanceCmd = &cobra.Command{
 	},
 }
 
-
-var ruleCmd = &cobra.Command{
-	Use:   "rule",
-	Short: "Manage redundancy rules",
-	Run: func(cmd *cobra.Command, args []string) {
-		log.Fatal("not implemented yet")
-	},
-}
