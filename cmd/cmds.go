@@ -13,9 +13,13 @@ var Verbose bool
 var YesMan bool
 var DryRun bool
 
+func ErrAndEnd(exitcode int, msg string) {
+	fmt.Println("Error:", msg)
+	os.Exit(exitcode)
+}
+
 func RegisterCommands() {
 	RootCmd.AddCommand(versionCmd)
-	RootCmd.AddCommand(createCmd)
 	RootCmd.AddCommand(mountCmd)
 	RootCmd.AddCommand(checkCmd)
 	RootCmd.AddCommand(syncCmd)
@@ -23,6 +27,7 @@ func RegisterCommands() {
 	RootCmd.AddCommand(statsCmd)
 	RootCmd.AddCommand(rebalanceCmd)
 
+	RegisterCreateCommands(RootCmd)
 	RegisterRuleCommands(RootCmd)
 
 	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Verbose output")
@@ -41,23 +46,6 @@ var versionCmd = &cobra.Command{
 	Short: "Print the version number of jbov",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(jbov.FullName, jbov.Version)
-	},
-}
-
-var createCmd = &cobra.Command{
-	Use:   "create name [vol_alias:/path]...",
-	Short: "Creates a new a jbov",
-	Run: func(cmd *cobra.Command, args []string) {
-
-		if (len(args)<2) {
-			fmt.Println("Error: you need at least two parameters, the jbov name and at least one initial volume.")
-			os.Exit(-1)
-		}
-
-
-
-
-
 	},
 }
 
@@ -108,4 +96,3 @@ var rebalanceCmd = &cobra.Command{
 		log.Fatal("not implemented yet")
 	},
 }
-
