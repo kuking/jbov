@@ -23,7 +23,7 @@ var createCmd = &cobra.Command{
 		var jbov = md.JBOV{
 			Cname:          args[0],
 			Uniqid:         api.GenerateJbovUniqId(),
-			LastMountPoint: "/",
+			LastMountPoint: "",
 			Volumes:        make(map[string]md.Volume),
 		}
 
@@ -31,22 +31,30 @@ var createCmd = &cobra.Command{
 			addVolumeOutOfArg(&jbov, args[i])
 		}
 
+		err := api.Create(&jbov)
+		if err != nil {
+			ErrAndEnd(-1, err.Error())
+		}
+
+
 		json, err := json.MarshalIndent(jbov, "", "    ")
 		if err != nil {
 			ErrAndEnd(-1, "Failed to serialise Json")
 		}
 		fmt.Printf("%s\n", json)
 	},
+
+
 }
 
 func addVolumeOutOfArg(jbov *md.JBOV, arg string) {
-	var splitted = strings.Split(arg, ":")
-	if len(splitted) != 2 {
+	var splited = strings.Split(arg, ":")
+	if len(splited) != 2 {
 		ErrAndEnd(-1, "Volume descriptor should have the format: volumename:/path/to/it")
 	}
 
-	cname := splitted[0]
-	mountPoint := splitted[1]
+	var cname = splited[0]
+	var mountPoint = splited[1]
 
 	usr, err := user.Current()
 	if err != nil {
@@ -54,6 +62,7 @@ func addVolumeOutOfArg(jbov *md.JBOV, arg string) {
 	}
 
 	if len(mountPoint) == 0 || mountPoint[0] == '~' {
+		// expands ~ as it is inside a string and it will not be expanded by the shell
 		mountPoint = filepath.Join(usr.HomeDir, mountPoint[1:])
 	}
 
