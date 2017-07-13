@@ -31,11 +31,9 @@ var createCmd = &cobra.Command{
 			addVolumeOutOfArg(&jbov, args[i])
 		}
 
-		err := api.Create(&jbov)
-		if err != nil {
+		if err := api.Create(&jbov) ; err != nil {
 			ErrAndEnd(-1, err.Error())
 		}
-
 
 		json, err := json.MarshalIndent(jbov, "", "    ")
 		if err != nil {
