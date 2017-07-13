@@ -2,31 +2,26 @@ package api
 
 import (
 	"testing"
-	"log"
+	"github.com/stretchr/testify/assert"
 )
-
-func assert(t bool) {
-	if !t {
-		log.Panic("assertion fail")
-	}
-}
 
 func TestGeneratedJbovUniqIdValidates(t *testing.T) {
 	uniqid := GenerateJbovUniqId()
-	assert(IsJbovUniqId(&uniqid))
+	assert.True(t, IsJbovUniqId(&uniqid), "GenerateJbovUniqId and IsJbovUniqId does not seem to agree")
 }
 
 func TestGeneratedVolUniqIdValidates(t *testing.T) {
 	uniqid := GenerateVolumeUniqId()
-	assert(IsVolumeUniqId(&uniqid))
+	assert.True(t, IsVolumeUniqId(&uniqid), "GenerateVolumeUniqId and IsVolumeUniqId does not seem to agree")
 }
 
-func TestUniqIdsCrossed(t *testing.T) {
-	vol := GenerateVolumeUniqId()
-	jbov := GenerateJbovUniqId()
-	assert(vol != jbov)
-	assert(IsVolumeUniqId(&vol))
-	assert(!IsVolumeUniqId(&jbov))
-	assert(IsJbovUniqId(&jbov))
-	assert(!IsJbovUniqId(&vol))
+func TestJbovUniqIdDoesNotValidatesAsVolId(t *testing.T) {
+	jbovUniqId := GenerateJbovUniqId()
+	assert.False(t, IsVolumeUniqId(&jbovUniqId), "GenerateJbovUniqId should not be validated by IsVolumeUniqId")
 }
+
+func TestGenerateVolumeUniqIdDoesNotValidateAsJBovId(t *testing.T) {
+	jbovUniqId := GenerateVolumeUniqId()
+	assert.False(t, IsJbovUniqId(&jbovUniqId), "GenerateVolumeUniqId should not be validated by IsJbovUniqId")
+}
+
