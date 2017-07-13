@@ -24,7 +24,7 @@ var createCmd = &cobra.Command{
 			Cname:          args[0],
 			Uniqid:         api.GenerateJbovUniqId(),
 			LastMountPoint: "",
-			Volumes:        make(map[string]md.Volume),
+			Volumes:        make(map[string]*md.Volume),
 		}
 
 		for i := 1; i < len(args); i++ {
@@ -69,7 +69,7 @@ func addVolumeOutOfArg(jbov *md.JBOV, arg string) {
 		ErrAndEnd(-1, "Path not valid: "+err.Error())
 	}
 
-	jbov.Volumes[cname] = md.Volume{
+	jbov.Volumes[cname] = &md.Volume{
 		Uniqid:         api.GenerateVolumeUniqId(),
 		LastMountPoint: mountPoint,
 		Deprecated:     false,

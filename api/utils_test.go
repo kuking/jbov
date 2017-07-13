@@ -56,7 +56,7 @@ func TestValidCname_InvalidSymbols(t *testing.T) {
 // integrated IsValidJBOV
 
 func TestCanCreate_happyPath(t *testing.T) {
-	jbov := givenAValidJBOV()
+	jbov := givenValidJBOV()
 
 	ok, err := IsValidJBOV(&jbov)
 
@@ -65,7 +65,7 @@ func TestCanCreate_happyPath(t *testing.T) {
 }
 
 func TestCanCreate_invalidCname(t *testing.T) {
-	jbov := givenAValidJBOV()
+	jbov := givenValidJBOV()
 	jbov.Cname = "INVALID"
 
 	ok, err := IsValidJBOV(&jbov)
@@ -75,7 +75,7 @@ func TestCanCreate_invalidCname(t *testing.T) {
 }
 
 func TestCanCreate_invalidJBovUniqId(t *testing.T) {
-	jbov := givenAValidJBOV()
+	jbov := givenValidJBOV()
 	jbov.Uniqid = "invalid"
 
 	ok, err := IsValidJBOV(&jbov)
@@ -85,7 +85,7 @@ func TestCanCreate_invalidJBovUniqId(t *testing.T) {
 }
 
 func TestCanCreate_noVolumes(t *testing.T) {
-	jbov := givenAValidJBOV()
+	jbov := givenValidJBOV()
 	jbov.Volumes = nil
 
 	ok, err := IsValidJBOV(&jbov)
@@ -95,7 +95,7 @@ func TestCanCreate_noVolumes(t *testing.T) {
 }
 
 func TestCanCreate_VolumeWithInvalidName(t *testing.T) {
-	jbov := givenAValidJBOV()
+	jbov := givenValidJBOV()
 	jbov.Volumes["INVALID_VOL_CNAME"] = jbov.Volumes["vol1"]
 
 	ok, err := IsValidJBOV(&jbov)
@@ -104,9 +104,20 @@ func TestCanCreate_VolumeWithInvalidName(t *testing.T) {
 	assert.EqualErrorf(t, err, "JBOV volume has an invalid cname", "volume with invalid cname should fail")
 }
 
-func givenAValidJBOV() md.JBOV {
-	vols := make(map[string]md.Volume)
-	vols["vol1"]=md.Volume{Uniqid: GenerateVolumeUniqId(), LastMountPoint: "/mnt/vol1", Deprecated: false }
-	vols["vol2"]=md.Volume{Uniqid: GenerateVolumeUniqId(), LastMountPoint: "/mnt/vol2", Deprecated: false }
+func TestCanCreate_VolumeWithInvalidUniqid(t *testing.T) {
+	jbov := givenValidJBOV()
+	jbov.Volumes["vol1"].Uniqid = GenerateJbovUniqId()
+
+	ok, err := IsValidJBOV(&jbov)
+
+	assert.False(t, ok)
+	assert.EqualErrorf(t, err, "JBOV volume has an invalid uniqid", "volume with invalid uniqid should fail")
+}
+
+
+func givenValidJBOV() md.JBOV {
+	vols := make(map[string]*md.Volume)
+	vols["vol1"]=&md.Volume{Uniqid: GenerateVolumeUniqId(), LastMountPoint: "/mnt/vol1", Deprecated: false }
+	vols["vol2"]=&md.Volume{Uniqid: GenerateVolumeUniqId(), LastMountPoint: "/mnt/vol2", Deprecated: false }
 	return md.JBOV{Cname: "valid", Uniqid: GenerateJbovUniqId(), Volumes: vols}
 }

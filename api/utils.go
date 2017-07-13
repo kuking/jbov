@@ -57,9 +57,8 @@ func IsValidJBOV(jbov *md.JBOV) (bool, error) {
 			return false, errors.New("JBOV volume has an invalid cname")
 		}
 		if !IsVolumeUniqId(&vol.Uniqid) {
-			return false, errors.New("Volume uniqid does not looks valid")
+			return false, errors.New("JBOV volume has an invalid uniqid")
 		}
-
 	}
 
 	return true, nil

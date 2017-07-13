@@ -4,9 +4,9 @@ type JBOV struct {
 	Cname          string `json:"cname"`
 	Uniqid         string `json:"uniqid"`
 	LastMountPoint string `json:"last-mount-point"`
-	Volumes        map[string]Volume `json:"volumes""`
+	Volumes        map[string]*Volume `json:"volumes""`
 	Rules          []Rule `json:"rules,omitempty"`
-	Deleted        map[string]Deleted `json:"deleted,omitempty"`
+	Deleted        map[string]*Deleted `json:"deleted,omitempty"`
 }
 
 type Volume struct {
