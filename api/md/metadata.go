@@ -104,6 +104,12 @@ func (jbov *JBOV) IsValid() (bool, error) {
 	return true, nil
 }
 
-func (jbov *JBOV) Marshall() ([]byte, error) {
+func (jbov *JBOV) Marshal() ([]byte, error) {
 	return json.MarshalIndent(jbov, "", "    ")
+}
+
+func (JBOV) Unmarshall(jsonbytes *[]byte) JBOV {
+	var jbov JBOV
+	json.Unmarshal(*jsonbytes, &jbov)
+	return jbov
 }

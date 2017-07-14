@@ -3,17 +3,16 @@ package md
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
-	"fmt"
 )
 
 // uniq ids creation and validation
 
-func TestGeneratedJbovUniqIdValidates(t *testing.T) {
+func TestGeneratedJbovUniqId_Validates(t *testing.T) {
 	uniqid := GenerateJbovUniqId()
 	assert.True(t, IsJbovUniqId(&uniqid), "GenerateJbovUniqId and IsJbovUniqId does not seem to agree")
 }
 
-func TestGeneratedVolUniqIdValidates(t *testing.T) {
+func TestGeneratedVolUniqId_Validates(t *testing.T) {
 	uniqid := GenerateVolumeUniqId()
 	assert.True(t, IsVolumeUniqId(&uniqid), "GenerateVolumeUniqId and IsVolumeUniqId does not seem to agree")
 }
@@ -30,21 +29,21 @@ func TestGenerateVolumeUniqIdDoesNotValidateAsJBovId(t *testing.T) {
 
 // cname validation
 
-func TestValidCname(t *testing.T) {
+func TestIsValidCname(t *testing.T) {
 	valids := []string{"valid", "valvalval", "long_valid", "lowercase_is_ok", "vol1", "vol", "numbers_ok_111"}
 	for _, valid := range valids {
 		assert.True(t, IsValidCname(&valid), "'"+valid+"' should be a valid cname")
 	}
 }
 
-func TestNotValidCname(t *testing.T) {
+func TestIsValidCname_Unhappy(t *testing.T) {
 	invalids := []string{"", "AA", "aa", "UPPERCASE_NOT_OK", "super_long_one_is_not_valid"}
 	for _, invalid := range invalids {
 		assert.False(t, IsValidCname(&invalid), "'"+invalid+"' should be an invalid cname")
 	}
 }
 
-func TestValidCname_InvalidSymbols(t *testing.T) {
+func TestIsValidCname_InvalidSymbols(t *testing.T) {
 	all_invalids := "!@£$%^&*-=~`[]{}();:'\",./<>?j"
 	for _, c := range all_invalids {
 		st := string(c)
@@ -54,51 +53,36 @@ func TestValidCname_InvalidSymbols(t *testing.T) {
 
 // serialise
 
-func TestMarshalJBOV(t *testing.T) {
+func TestMarshal(t *testing.T) {
 	jbov := givenValidJBOV()
 	jbov.Uniqid = "JBOV:0000000000000000000000000000000000000000"
 	jbov.Volumes["vol1"].Uniqid = "VOL:1111111111111111111111111111111111111111"
 	jbov.Volumes["vol2"].Uniqid = "VOL:2222222222222222222222222222222222222222"
 
-	content, err := jbov.Marshall()
-	fmt.Println(string(content))
+	content, err := jbov.Marshal()
 
 	assert.NoError(t, err)
-	expected := `{
-		"cname": "valid",
-		"uniqid": "JBOV:0000000000000000000000000000000000000000",
-		"last-mount-point": "",
-		"volumes": {
-			"vol1": {
-				"uniqid": "VOL:1111111111111111111111111111111111111111",
-				"last-mount-point": "/mnt/vol1"
-			},
-			"vol2": {
-				"uniqid": "VOL:2222222222222222222222222222222222222222",
-				"last-mount-point": "/mnt/vol2"
-			}
-		},
-		"rules": [
-			{ "pattern": "*.mk4", "ncopies": 1 },
-			{ "pattern": "*.txt", "at-least-a-copy-in": "vol1" }
-		],
-		"deleted": {
-			"path/other/file": { "ts": 1, "pending": [ "vol1", "vol2" ] },
-			"path/to/file": { "ts": 1, "pending": [ "vol1" ] }
-		}
-	}`
-	assert.JSONEq(t, expected, string(content))
+	assert.JSONEq(t, givenAValidJson(), string(content))
 }
 
-func TestUnmarshalJBOV(t *testing.T) {
-	// TODO
+func TestUnmarshal(t *testing.T) {
+	jsonbytes := []byte(givenAValidJson())
+
+	jbov := JBOV{}.Unmarshall(&jsonbytes)
+
+	ok, err := jbov.IsValid()
+	assert.True(t, ok)
+	assert.NoError(t, err)
 }
 
 func TestRoundTripMarshaller(t *testing.T) {
-	// TODO
-}
+	jbov := givenValidJBOV()
 
-//  IsValid
+	content, _ := jbov.Marshal()
+	jbov2 := JBOV{}.Unmarshall(&content)
+
+	assert.Equal(t, jbov, jbov2)
+}
 
 func TestIsValid_happyPath(t *testing.T) {
 	jbov := givenValidJBOV()
@@ -108,6 +92,8 @@ func TestIsValid_happyPath(t *testing.T) {
 	assert.True(t, ok)
 	assert.NoError(t, err, "this JBOV should be valid")
 }
+
+//  IsValid
 
 func TestIsValid_invalidCname(t *testing.T) {
 	jbov := givenValidJBOV()
@@ -193,4 +179,31 @@ func givenValidJBOV() JBOV {
 	deleted["path/other/file"] = &Deleted{Ts: 1, Pending: []string{"vol1", "vol2"}}
 
 	return JBOV{Cname: "valid", Uniqid: GenerateJbovUniqId(), Volumes: vols, Rules: rules, Deleted: deleted}
+}
+
+func givenAValidJson() string {
+	expected := `{
+			"cname": "valid",
+			"uniqid": "JBOV:0000000000000000000000000000000000000000",
+			"last-mount-point": "",
+			"volumes": {
+				"vol1": {
+					"uniqid": "VOL:1111111111111111111111111111111111111111",
+					"last-mount-point": "/mnt/vol1"
+				},
+				"vol2": {
+					"uniqid": "VOL:2222222222222222222222222222222222222222",
+					"last-mount-point": "/mnt/vol2"
+				}
+			},
+			"rules": [
+				{ "pattern": "*.mk4", "ncopies": 1 },
+				{ "pattern": "*.txt", "at-least-a-copy-in": "vol1" }
+			],
+			"deleted": {
+				"path/other/file": { "ts": 1, "pending": [ "vol1", "vol2" ] },
+				"path/to/file": { "ts": 1, "pending": [ "vol1" ] }
+			}
+		}`
+	return expected
 }
