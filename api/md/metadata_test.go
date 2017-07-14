@@ -1,11 +1,8 @@
-package api
+package md
 
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
-	"github.com/kuking/jbov/api/md"
-	"os"
-	"io/ioutil"
 )
 
 // uniq ids creation and validation
@@ -35,14 +32,14 @@ func TestGenerateVolumeUniqIdDoesNotValidateAsJBovId(t *testing.T) {
 func TestValidCname(t *testing.T) {
 	valids := []string{"valid", "valvalval", "long_valid", "lowercase_is_ok", "vol1", "vol", "numbers_ok_111"}
 	for _, valid := range valids {
-		assert.True(t, isValidCname(&valid), "'"+valid+"' should be a valid cname")
+		assert.True(t, IsValidCname(&valid), "'"+valid+"' should be a valid cname")
 	}
 }
 
 func TestNotValidCname(t *testing.T) {
 	invalids := []string{"", "AA", "aa", "UPPERCASE_NOT_OK", "super_long_one_is_not_valid"}
 	for _, invalid := range invalids {
-		assert.False(t, isValidCname(&invalid), "'"+invalid+"' should be an invalid cname")
+		assert.False(t, IsValidCname(&invalid), "'"+invalid+"' should be an invalid cname")
 	}
 }
 
@@ -50,16 +47,53 @@ func TestValidCname_InvalidSymbols(t *testing.T) {
 	all_invalids := "!@£$%^&*-=~`[]{}();:'\",./<>?j"
 	for _, c := range all_invalids {
 		st := string(c)
-		assert.False(t, isValidCname(&st), "'"+st+"' should not be a valid cname")
+		assert.False(t, IsValidCname(&st), "'"+st+"' should not be a valid cname")
 	}
 }
 
-//  IsValidJBOV
+// serialise
 
-func TestIsValidJBOV_happyPath(t *testing.T) {
+func TestMarshalJBOV(t *testing.T) {
+	jbov := givenValidJBOV()
+	jbov.Uniqid = "JBOV:0000000000000000000000000000000000000000"
+	jbov.Volumes["vol1"].Uniqid = "VOL:1111111111111111111111111111111111111111"
+	jbov.Volumes["vol2"].Uniqid = "VOL:2222222222222222222222222222222222222222"
+
+	content, err := jbov.Marshall()
+
+	assert.NoError(t, err)
+	expected := `{
+		"cname": "valid",
+		"uniqid": "JBOV:0000000000000000000000000000000000000000",
+		"last-mount-point": "",
+		"volumes": {
+			"vol1": {
+				"uniqid": "VOL:1111111111111111111111111111111111111111",
+				"last-mount-point": "/mnt/vol1"
+			},
+			"vol2": {
+				"uniqid": "VOL:2222222222222222222222222222222222222222",
+				"last-mount-point": "/mnt/vol2"
+			}
+		}
+	}`
+	assert.JSONEq(t, expected, string(content))
+}
+
+func TestUnmarshalJBOV(t *testing.T) {
+	// TODO
+}
+
+func TestRoundTripMarshaller(t *testing.T) {
+	// TODO
+}
+
+//  IsValid
+
+func TestIsValid_happyPath(t *testing.T) {
 	jbov := givenValidJBOV()
 
-	ok, err := IsValidJBOV(&jbov)
+	ok, err := jbov.IsValid()
 
 	assert.True(t, ok)
 	assert.NoError(t, err, "this JBOV should be valid")
@@ -69,7 +103,7 @@ func TestIsValidJBOV_invalidCname(t *testing.T) {
 	jbov := givenValidJBOV()
 	jbov.Cname = "INVALID"
 
-	ok, err := IsValidJBOV(&jbov)
+	ok, err := jbov.IsValid()
 
 	assert.False(t, ok)
 	assert.EqualErrorf(t, err, "JBOV cname is not valid", "invalid cname should fail")
@@ -79,7 +113,7 @@ func TestIsValidJBOV_invalidJBovUniqId(t *testing.T) {
 	jbov := givenValidJBOV()
 	jbov.Uniqid = "invalid"
 
-	ok, err := IsValidJBOV(&jbov)
+	ok, err := jbov.IsValid()
 
 	assert.False(t, ok)
 	assert.EqualErrorf(t, err, "JBOV UniqId does not looks valid", "invalid jbov uniq should fail")
@@ -89,7 +123,7 @@ func TestIsValidJBOV_noVolumes(t *testing.T) {
 	jbov := givenValidJBOV()
 	jbov.Volumes = nil
 
-	ok, err := IsValidJBOV(&jbov)
+	ok, err := jbov.IsValid()
 
 	assert.False(t, ok)
 	assert.EqualErrorf(t, err, "JBOV requires at least one volume", "jbov without volumes should fail")
@@ -99,7 +133,7 @@ func TestIsValidJBOV_VolumeWithInvalidName(t *testing.T) {
 	jbov := givenValidJBOV()
 	jbov.Volumes["INVALID_VOL_CNAME"] = jbov.Volumes["vol1"]
 
-	ok, err := IsValidJBOV(&jbov)
+	ok, err := jbov.IsValid()
 
 	assert.False(t, ok)
 	assert.EqualErrorf(t, err, "JBOV volume has an invalid cname", "volume with invalid cname should fail")
@@ -109,31 +143,20 @@ func TestIsValidJBOV_VolumeWithInvalidUniqid(t *testing.T) {
 	jbov := givenValidJBOV()
 	jbov.Volumes["vol1"].Uniqid = GenerateJbovUniqId()
 
-	ok, err := IsValidJBOV(&jbov)
+	ok, err := jbov.IsValid()
 
 	assert.False(t, ok)
 	assert.EqualErrorf(t, err, "JBOV volume has an invalid uniqid", "volume with invalid uniqid should fail")
 }
 
-// utility
 
-func givenValidJBOV() md.JBOV {
-	vols := make(map[string]*md.Volume)
-	vols["vol1"] = &md.Volume{Uniqid: GenerateVolumeUniqId(), LastMountPoint: "/mnt/vol1", Deprecated: false }
-	vols["vol2"] = &md.Volume{Uniqid: GenerateVolumeUniqId(), LastMountPoint: "/mnt/vol2", Deprecated: false }
-	return md.JBOV{Cname: "valid", Uniqid: GenerateJbovUniqId(), Volumes: vols}
-}
 
-func givenMountPointsExist(jbov *md.JBOV) {
-	for _, vol := range jbov.Volumes {
-		dir, _ := ioutil.TempDir(os.TempDir(), "")
-		vol.LastMountPoint = dir
-	}
-}
+// utils
 
-func cleanupMountPoints(jbov *md.JBOV) {
-	for _, vol := range jbov.Volumes {
-		os.RemoveAll(vol.LastMountPoint)
-	}
 
+func givenValidJBOV() JBOV {
+	vols := make(map[string]*Volume)
+	vols["vol1"] = &Volume{Uniqid: GenerateVolumeUniqId(), LastMountPoint: "/mnt/vol1", Deprecated: false }
+	vols["vol2"] = &Volume{Uniqid: GenerateVolumeUniqId(), LastMountPoint: "/mnt/vol2", Deprecated: false }
+	return JBOV{Cname: "valid", Uniqid: GenerateJbovUniqId(), Volumes: vols}
 }

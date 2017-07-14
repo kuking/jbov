@@ -9,7 +9,7 @@ import (
 )
 
 func CanCreateJBOV(jbov *md.JBOV) (bool, error) {
-	if ok, _ := IsValidJBOV(jbov); !ok {
+	if ok, _ := jbov.IsValid(); !ok {
 		return false, errors.New("JBOV object should be valid")
 	}
 
@@ -41,12 +41,12 @@ func CanCreateJBOV(jbov *md.JBOV) (bool, error) {
 	return true, nil
 }
 
-func Create(jbov *md.JBOV) error {
+func Create(jbov *md.JBOV) (bool, error) {
 
-	ok, err := IsValidJBOV(jbov)
+	ok, err := CanCreateJBOV(jbov)
 	if !ok && err != nil {
-		return err
+		return false, err
 	}
 
-	return nil
+	return true, nil
 }

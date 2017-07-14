@@ -22,7 +22,7 @@ var createCmd = &cobra.Command{
 
 		var jbov = md.JBOV{
 			Cname:          args[0],
-			Uniqid:         api.GenerateJbovUniqId(),
+			Uniqid:         md.GenerateJbovUniqId(),
 			LastMountPoint: "",
 			Volumes:        make(map[string]*md.Volume),
 		}
@@ -31,7 +31,7 @@ var createCmd = &cobra.Command{
 			addVolumeOutOfArg(&jbov, args[i])
 		}
 
-		if err := api.Create(&jbov) ; err != nil {
+		if _, err := api.Create(&jbov) ; err != nil {
 			ErrAndEnd(-1, err.Error())
 		}
 
@@ -70,7 +70,7 @@ func addVolumeOutOfArg(jbov *md.JBOV, arg string) {
 	}
 
 	jbov.Volumes[cname] = &md.Volume{
-		Uniqid:         api.GenerateVolumeUniqId(),
+		Uniqid:         md.GenerateVolumeUniqId(),
 		LastMountPoint: mountPoint,
 		Deprecated:     false,
 	}

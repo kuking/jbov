@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"github.com/kuking/jbov/api/md"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 )
 
 // CanCreateJBOV
@@ -102,3 +103,44 @@ func TestCanCreateJBOV_shouldNotStartWithDeprecatedVolumes(t *testing.T) {
 	assert.EqualError(t, err, "An about to be created JBOV should not start with a deprecated volume: vol1")
 }
 
+// Create
+
+func TestCreateJBOV_happyPath(t *testing.T) {
+	jbov := givenValidJBOV()
+	givenMountPointsExist(&jbov)
+	defer cleanupMountPoints(&jbov)
+
+	ok, err := Create(&jbov)
+
+	assert.True(t, ok)
+	assert.NoError(t, err)
+
+	 //metadata files
+	//for cname, volume := range jbov.Volumes {
+	//	json, err := ioutil.ReadFile(filepath.Join(volume.LastMountPoint, md.JBOV_FNAME))
+	//}
+}
+
+
+
+// utility
+
+func givenValidJBOV() md.JBOV {
+	vols := make(map[string]*md.Volume)
+	vols["vol1"] = &md.Volume{Uniqid: md.GenerateVolumeUniqId(), LastMountPoint: "/mnt/vol1", Deprecated: false }
+	vols["vol2"] = &md.Volume{Uniqid: md.GenerateVolumeUniqId(), LastMountPoint: "/mnt/vol2", Deprecated: false }
+	return md.JBOV{Cname: "valid", Uniqid: md.GenerateJbovUniqId(), Volumes: vols}
+}
+
+func givenMountPointsExist(jbov *md.JBOV) {
+	for _, vol := range jbov.Volumes {
+		dir, _ := ioutil.TempDir(os.TempDir(), "")
+		vol.LastMountPoint = dir
+	}
+}
+
+func cleanupMountPoints(jbov *md.JBOV) {
+	for _, vol := range jbov.Volumes {
+		os.RemoveAll(vol.LastMountPoint)
+	}
+}
