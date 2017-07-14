@@ -9,6 +9,10 @@ import (
 	"os"
 )
 
+var RE_JBOV_UNIQ = regexp.MustCompile("^JBOV:[0-9a-f]{16,64}$")
+var RE_VOL_UNIQ = regexp.MustCompile("^VOL:[0-9a-f]{16,64}$")
+var RE_VALID_CNAME = regexp.MustCompile("^[a-z0-9_]{3,20}$")
+
 func generateUniqid(prefix string) string {
 	buf := make([]byte, 20)
 	rand.Read(buf)
@@ -24,18 +28,15 @@ func GenerateJbovUniqId() string {
 }
 
 func IsJbovUniqId(uniqid *string) bool {
-	re := regexp.MustCompile("^JBOV:[0-9a-f]{16,64}$")
-	return re.MatchString(*uniqid)
+	return RE_JBOV_UNIQ.MatchString(*uniqid)
 }
 
 func IsVolumeUniqId(uniqid *string) bool {
-	re := regexp.MustCompile("^VOL:[0-9a-f]{16,64}$")
-	return re.MatchString(*uniqid)
+	return RE_VOL_UNIQ.MatchString(*uniqid)
 }
 
 func isValidCname(cname *string) bool {
-	re := regexp.MustCompile("^[a-z0-9_]{3,20}$") //TODO: compile just once?
-	return re.MatchString(*cname)
+	return RE_VALID_CNAME.MatchString(*cname)
 }
 
 func IsValidJBOV(jbov *md.JBOV) (bool, error) {
