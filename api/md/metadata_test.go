@@ -3,6 +3,7 @@ package md
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
+	"fmt"
 )
 
 // uniq ids creation and validation
@@ -60,6 +61,7 @@ func TestMarshalJBOV(t *testing.T) {
 	jbov.Volumes["vol2"].Uniqid = "VOL:2222222222222222222222222222222222222222"
 
 	content, err := jbov.Marshall()
+	fmt.Println(string(content))
 
 	assert.NoError(t, err)
 	expected := `{
@@ -75,6 +77,14 @@ func TestMarshalJBOV(t *testing.T) {
 				"uniqid": "VOL:2222222222222222222222222222222222222222",
 				"last-mount-point": "/mnt/vol2"
 			}
+		},
+		"rules": [
+			{ "pattern": "*.mk4", "ncopies": 1 },
+			{ "pattern": "*.txt", "at-least-a-copy-in": "vol1" }
+		],
+		"deleted": {
+			"path/other/file": { "ts": 1, "pending": [ "vol1", "vol2" ] },
+			"path/to/file": { "ts": 1, "pending": [ "vol1" ] }
 		}
 	}`
 	assert.JSONEq(t, expected, string(content))
@@ -99,7 +109,7 @@ func TestIsValid_happyPath(t *testing.T) {
 	assert.NoError(t, err, "this JBOV should be valid")
 }
 
-func TestIsValidJBOV_invalidCname(t *testing.T) {
+func TestIsValid_invalidCname(t *testing.T) {
 	jbov := givenValidJBOV()
 	jbov.Cname = "INVALID"
 
@@ -109,7 +119,7 @@ func TestIsValidJBOV_invalidCname(t *testing.T) {
 	assert.EqualErrorf(t, err, "JBOV cname is not valid", "invalid cname should fail")
 }
 
-func TestIsValidJBOV_invalidJBovUniqId(t *testing.T) {
+func TestIsValid_invalidJBovUniqId(t *testing.T) {
 	jbov := givenValidJBOV()
 	jbov.Uniqid = "invalid"
 
@@ -119,7 +129,7 @@ func TestIsValidJBOV_invalidJBovUniqId(t *testing.T) {
 	assert.EqualErrorf(t, err, "JBOV UniqId does not looks valid", "invalid jbov uniq should fail")
 }
 
-func TestIsValidJBOV_noVolumes(t *testing.T) {
+func TestIsValid_noVolumes(t *testing.T) {
 	jbov := givenValidJBOV()
 	jbov.Volumes = nil
 
@@ -129,7 +139,7 @@ func TestIsValidJBOV_noVolumes(t *testing.T) {
 	assert.EqualErrorf(t, err, "JBOV requires at least one volume", "jbov without volumes should fail")
 }
 
-func TestIsValidJBOV_VolumeWithInvalidName(t *testing.T) {
+func TestIsValid_VolumeWithInvalidName(t *testing.T) {
 	jbov := givenValidJBOV()
 	jbov.Volumes["INVALID_VOL_CNAME"] = jbov.Volumes["vol1"]
 
@@ -139,7 +149,7 @@ func TestIsValidJBOV_VolumeWithInvalidName(t *testing.T) {
 	assert.EqualErrorf(t, err, "JBOV volume has an invalid cname", "volume with invalid cname should fail")
 }
 
-func TestIsValidJBOV_VolumeWithInvalidUniqid(t *testing.T) {
+func TestIsValid_VolumeWithInvalidUniqid(t *testing.T) {
 	jbov := givenValidJBOV()
 	jbov.Volumes["vol1"].Uniqid = GenerateJbovUniqId()
 
@@ -149,14 +159,38 @@ func TestIsValidJBOV_VolumeWithInvalidUniqid(t *testing.T) {
 	assert.EqualErrorf(t, err, "JBOV volume has an invalid uniqid", "volume with invalid uniqid should fail")
 }
 
+func TestIsValid_RuleAtLeastOneCopyInWithReferenceToInvalidVolume(t *testing.T) {
+	jbov := givenValidJBOV()
+	jbov.Rules[0].AtLeastACopyIn = "nonexistent"
 
+	ok, err := jbov.IsValid()
+
+	assert.False(t, ok)
+	assert.EqualError(t, err, "JBOV rule at-least-a-copy-in refers to an invalid volume: nonexistent")
+}
+
+func TestIsValid_DeletedFileWithReferenceToInvalidVolume(t *testing.T) {
+	jbov := givenValidJBOV()
+	jbov.Deleted["path/to/file"].Pending[0] = "nonexistent"
+
+	ok, err := jbov.IsValid()
+
+	assert.False(t, ok)
+	assert.EqualError(t, err, "JBOV deleted pending refers to invalid volume: nonexistent")
+}
 
 // utils
-
 
 func givenValidJBOV() JBOV {
 	vols := make(map[string]*Volume)
 	vols["vol1"] = &Volume{Uniqid: GenerateVolumeUniqId(), LastMountPoint: "/mnt/vol1", Deprecated: false }
 	vols["vol2"] = &Volume{Uniqid: GenerateVolumeUniqId(), LastMountPoint: "/mnt/vol2", Deprecated: false }
-	return JBOV{Cname: "valid", Uniqid: GenerateJbovUniqId(), Volumes: vols}
+
+	rules := []Rule{{Pattern: "*.mk4", Ncopies: 1}, {Pattern: "*.txt", AtLeastACopyIn: "vol1"}}
+
+	deleted := make(map[string]*Deleted)
+	deleted["path/to/file"] = &Deleted{Ts: 1, Pending: []string{"vol1"}}
+	deleted["path/other/file"] = &Deleted{Ts: 1, Pending: []string{"vol1", "vol2"}}
+
+	return JBOV{Cname: "valid", Uniqid: GenerateJbovUniqId(), Volumes: vols, Rules: rules, Deleted: deleted}
 }

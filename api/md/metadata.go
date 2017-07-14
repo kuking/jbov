@@ -42,7 +42,6 @@ type Deleted struct {
 	Pending []string `json:"pending"`
 }
 
-
 func generateUniqid(prefix string) string {
 	buf := make([]byte, 20)
 	rand.Read(buf)
@@ -85,6 +84,21 @@ func (jbov *JBOV) IsValid() (bool, error) {
 		}
 		if !IsVolumeUniqId(&vol.Uniqid) {
 			return false, errors.New("JBOV volume has an invalid uniqid")
+		}
+	}
+	for _, deleted := range jbov.Deleted {
+		for _, volp := range deleted.Pending {
+			if _, ok := jbov.Volumes[volp]; !ok {
+				return false, errors.New(fmt.Sprintf("JBOV deleted pending refers to invalid volume: %s", volp))
+			}
+		}
+	}
+	for i := 0; i < len(jbov.Rules); i++ {
+		rule := jbov.Rules[i]
+		if rule.AtLeastACopyIn != "" {
+			if _, ok := jbov.Volumes[rule.AtLeastACopyIn]; !ok {
+				return false, errors.New(fmt.Sprintf("JBOV rule at-least-a-copy-in refers to an invalid volume: %s", rule.AtLeastACopyIn))
+			}
 		}
 	}
 	return true, nil
