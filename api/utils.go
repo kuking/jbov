@@ -6,6 +6,7 @@ import (
 	"github.com/kuking/jbov/api/md"
 	"errors"
 	"regexp"
+	"os"
 )
 
 func generateUniqid(prefix string) string {
@@ -23,17 +24,13 @@ func GenerateJbovUniqId() string {
 }
 
 func IsJbovUniqId(uniqid *string) bool {
-	if len(*uniqid)<15 || (*uniqid)[0:5] != "JBOV:" {
-		return false
-	}
-	return true
+	re := regexp.MustCompile("^JBOV:[0-9a-f]{16,64}$")
+	return re.MatchString(*uniqid)
 }
 
 func IsVolumeUniqId(uniqid *string) bool {
-	if len(*uniqid)<15 || (*uniqid)[0:4] != "VOL:" {
-		return false
-	}
-	return true
+	re := regexp.MustCompile("^VOL:[0-9a-f]{16,64}$")
+	return re.MatchString(*uniqid)
 }
 
 func isValidCname(cname *string) bool {
@@ -58,6 +55,23 @@ func IsValidJBOV(jbov *md.JBOV) (bool, error) {
 		}
 		if !IsVolumeUniqId(&vol.Uniqid) {
 			return false, errors.New("JBOV volume has an invalid uniqid")
+		}
+	}
+	return true, nil
+}
+
+func CanCreateJBOV(jbov *md.JBOV) (bool, error) {
+	if ok, _ := IsValidJBOV(jbov); !ok {
+		return false, errors.New("JBOV object should be valid")
+	}
+
+	for cname, volume := range jbov.Volumes {
+		stat, err := os.Stat(volume.LastMountPoint)
+		if os.IsNotExist(err) {
+			return false, errors.New(fmt.Sprintf("Volume mount point for \"%s\" does not exist: %s", cname, volume.LastMountPoint))
+		}
+		if !stat.IsDir() {
+			return false, errors.New(fmt.Sprintf("Volume mount point for \"%s\" is not a directory: %s", cname, volume.LastMountPoint))
 		}
 	}
 
