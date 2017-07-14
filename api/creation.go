@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"path/filepath"
 	"github.com/kuking/jbov/api/md"
+	"io/ioutil"
+	"strconv"
 )
 
-func CanCreateJBOV(jbov *md.JBOV) (bool, error) {
+func CanCreate(jbov *md.JBOV) (bool, error) {
 	if ok, _ := jbov.IsValid(); !ok {
 		return false, errors.New("JBOV object should be valid")
 	}
@@ -43,10 +45,28 @@ func CanCreateJBOV(jbov *md.JBOV) (bool, error) {
 
 func Create(jbov *md.JBOV) (bool, error) {
 
-	ok, err := CanCreateJBOV(jbov)
-	if !ok && err != nil {
+	if ok, err := CanCreate(jbov) ; !ok || err != nil {
 		return false, err
 	}
 
+	// creates the metadata files
+	jsonb, err := jbov.Marshal()
+	if err != nil {
+		return false, err
+	}
+	for _, vol := range jbov.Volumes {
+		filemode64, _ := strconv.ParseUint("744", 8, 32)
+		filemode := os.FileMode(filemode64)
+
+		err := ioutil.WriteFile(filepath.Join(vol.LastMountPoint, md.JBOV_FNAME), jsonb, filemode)
+		if err != nil {
+			return false, err
+		}
+
+		err = ioutil.WriteFile(filepath.Join(vol.LastMountPoint, md.UNIQID_FNAME), []byte(vol.Uniqid), filemode)
+		if err != nil {
+			return false, err
+		}
+	}
 	return true, nil
 }

@@ -9,13 +9,13 @@ import (
 	"io/ioutil"
 )
 
-// CanCreateJBOV
+// CanCreate
 
 func TestCanCreateJBOV_ShouldFailWithInvalidJBOV(t *testing.T) {
 	jbov := givenValidJBOV()
 	jbov.Uniqid = "invalid"
 
-	ok, err := CanCreateJBOV(&jbov)
+	ok, err := CanCreate(&jbov)
 
 	assert.False(t, ok)
 	assert.EqualError(t, err, "JBOV object should be valid")
@@ -26,7 +26,7 @@ func TestCanCreateJBOV_AllVolumeMountPointsMustExist(t *testing.T) {
 	givenMountPointsExist(&jbov)
 	defer cleanupMountPoints(&jbov)
 
-	ok, err := CanCreateJBOV(&jbov)
+	ok, err := CanCreate(&jbov)
 
 	assert.True(t, ok)
 	assert.Nil(t, err)
@@ -37,7 +37,7 @@ func TestCanCreateJBOV_failsWhenVolumeMountPointDoNotExist(t *testing.T) {
 	delete(jbov.Volumes, "vol2")
 	jbov.Volumes["vol1"].LastMountPoint = "/this-surely-does-not-exists/"
 
-	ok, err := CanCreateJBOV(&jbov)
+	ok, err := CanCreate(&jbov)
 
 	assert.False(t, ok)
 	assert.EqualError(t, err, "Volume mount point for \"vol1\" does not exist: /this-surely-does-not-exists/")
@@ -48,7 +48,7 @@ func TestCanCreateJBOV_failsWhenVolumeMountPointIsAFile(t *testing.T) {
 	delete(jbov.Volumes, "vol2")
 	jbov.Volumes["vol1"].LastMountPoint = "/etc/passwd"
 
-	ok, err := CanCreateJBOV(&jbov)
+	ok, err := CanCreate(&jbov)
 
 	assert.False(t, ok)
 	assert.EqualError(t, err, "Volume mount point for \"vol1\" is not a directory: /etc/passwd")
@@ -61,7 +61,7 @@ func TestCanCreateJBOV_failsWhenThereIsAMetadataFile(t *testing.T) {
 	f, _ := os.Create( filepath.Join(jbov.Volumes["vol1"].LastMountPoint, md.JBOV_FNAME))
 	f.Close()
 
-	ok, err := CanCreateJBOV(&jbov)
+	ok, err := CanCreate(&jbov)
 
 	assert.False(t, ok)
 	assert.EqualError(t, err, "Volume mount point for \"vol1\" seems to be part of an existing JBOV: \".jbov.metadata\" file found")
@@ -74,7 +74,7 @@ func TestCanCreateJBOV_failsWhenThereIsAUniqIDFile(t *testing.T) {
 	f, _ := os.Create( filepath.Join(jbov.Volumes["vol1"].LastMountPoint, md.UNIQID_FNAME))
 	f.Close()
 
-	ok, err := CanCreateJBOV(&jbov)
+	ok, err := CanCreate(&jbov)
 
 	assert.False(t, ok)
 	assert.EqualError(t, err, "Volume mount point for \"vol1\" seems to be part of an existing JBOV: \".jbov.uniqid\" file found")
@@ -85,7 +85,7 @@ func TestCanCreateJBOV_ShouldNotHaveDeletedFiles(t *testing.T) {
 	jbov.Deleted = make(map[string]*md.Deleted)
 	jbov.Deleted["a/path"] = &md.Deleted{Ts: 123}
 
-	ok, err := CanCreateJBOV(&jbov)
+	ok, err := CanCreate(&jbov)
 
 	assert.False(t, ok)
 	assert.EqualError(t, err, "An about to be created JBOV should not have deleted files")
@@ -97,7 +97,7 @@ func TestCanCreateJBOV_shouldNotStartWithDeprecatedVolumes(t *testing.T) {
 	defer cleanupMountPoints(&jbov)
 	jbov.Volumes["vol1"].Deprecated = true
 
-	ok, err := CanCreateJBOV(&jbov)
+	ok, err := CanCreate(&jbov)
 
 	assert.False(t, ok)
 	assert.EqualError(t, err, "An about to be created JBOV should not start with a deprecated volume: vol1")
@@ -115,10 +115,21 @@ func TestCreateJBOV_happyPath(t *testing.T) {
 	assert.True(t, ok)
 	assert.NoError(t, err)
 
-	 //metadata files
-	//for cname, volume := range jbov.Volumes {
-	//	json, err := ioutil.ReadFile(filepath.Join(volume.LastMountPoint, md.JBOV_FNAME))
-	//}
+	//metadata files
+	for _, volume := range jbov.Volumes {
+		jsonb, err := ioutil.ReadFile(filepath.Join(volume.LastMountPoint, md.JBOV_FNAME))
+		assert.NoError(t, err)
+		jbovInVol := md.JBOV{}.Unmarshall(&jsonb)
+		assert.Equal(t, jbov, jbovInVol)
+	}
+
+	//uniqid files
+	for _, volume := range jbov.Volumes {
+		uniqid, err := ioutil.ReadFile(filepath.Join(volume.LastMountPoint, md.UNIQID_FNAME))
+		assert.NoError(t, err)
+		assert.Equal(t, volume.Uniqid, string(uniqid))
+	}
+
 }
 
 

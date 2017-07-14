@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"encoding/json"
 	"strings"
 	"os/user"
 	"path/filepath"
@@ -31,15 +30,11 @@ var createCmd = &cobra.Command{
 			addVolumeOutOfArg(&jbov, args[i])
 		}
 
-		if _, err := api.Create(&jbov) ; err != nil {
+		if _, err := api.Create(&jbov); err != nil {
 			ErrAndEnd(-1, err.Error())
 		}
 
-		json, err := json.MarshalIndent(jbov, "", "    ")
-		if err != nil {
-			ErrAndEnd(-1, "Failed to serialise Json")
-		}
-		fmt.Printf("%s\n", json)
+		fmt.Println("Created!")
 	},
 
 
@@ -56,7 +51,7 @@ func addVolumeOutOfArg(jbov *md.JBOV, arg string) {
 
 	usr, err := user.Current()
 	if err != nil {
-		ErrAndEnd(-1, "Could not retrieve home: " + err.Error())
+		ErrAndEnd(-1, "Could not retrieve home: "+err.Error())
 	}
 
 	if len(mountPoint) == 0 || mountPoint[0] == '~' {
