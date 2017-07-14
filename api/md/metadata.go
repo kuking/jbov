@@ -1,5 +1,9 @@
 package md
 
+const JBOV_FNAME = ".jbov.metadata"
+const UNIQID_FNAME = ".jbov.uniqid"
+const LOCK_FNAME = ".jbov.lock"
+
 type JBOV struct {
 	Cname          string `json:"cname"`
 	Uniqid         string `json:"uniqid"`

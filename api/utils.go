@@ -7,11 +7,13 @@ import (
 	"errors"
 	"regexp"
 	"os"
+	"path/filepath"
 )
 
 var RE_JBOV_UNIQ = regexp.MustCompile("^JBOV:[0-9a-f]{16,64}$")
 var RE_VOL_UNIQ = regexp.MustCompile("^VOL:[0-9a-f]{16,64}$")
 var RE_VALID_CNAME = regexp.MustCompile("^[a-z0-9_]{3,20}$")
+
 
 func generateUniqid(prefix string) string {
 	buf := make([]byte, 20)
@@ -73,6 +75,14 @@ func CanCreateJBOV(jbov *md.JBOV) (bool, error) {
 		}
 		if !stat.IsDir() {
 			return false, errors.New(fmt.Sprintf("Volume mount point for \"%s\" is not a directory: %s", cname, volume.LastMountPoint))
+		}
+		_ , err = os.Stat(filepath.Join(volume.LastMountPoint, md.JBOV_FNAME))
+		if err == nil {
+			return false, errors.New(fmt.Sprintf("Volume mount point for \"%s\" seems to be part of an existing JBOV: \"%s\" file found", cname, md.JBOV_FNAME))
+		}
+		_ , err = os.Stat(filepath.Join(volume.LastMountPoint, md.UNIQID_FNAME))
+		if err == nil {
+			return false, errors.New(fmt.Sprintf("Volume mount point for \"%s\" seems to be part of an existing JBOV: \"%s\" file found", cname, md.UNIQID_FNAME))
 		}
 	}
 

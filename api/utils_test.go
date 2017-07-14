@@ -6,6 +6,7 @@ import (
 	"github.com/kuking/jbov/api/md"
 	"os"
 	"io/ioutil"
+	"path/filepath"
 )
 
 // uniq ids creation and validation
@@ -160,6 +161,31 @@ func TestCanCreateJBOV_failsWhenVolumeMountPointIsAFile(t *testing.T) {
 	assert.EqualError(t, err, "Volume mount point for \"vol1\" is not a directory: /etc/passwd")
 }
 
+func TestCanCreateJBOV_failsWhenThereIsAMetadataFile(t *testing.T) {
+	jbov := givenValidJBOV()
+	givenMountPointsExist(&jbov)
+	defer cleanupMountPoints(&jbov)
+	f, _ := os.Create( filepath.Join(jbov.Volumes["vol1"].LastMountPoint, md.JBOV_FNAME))
+	f.Close()
+
+	ok, err := CanCreateJBOV(&jbov)
+
+	assert.False(t, ok)
+	assert.EqualError(t, err, "Volume mount point for \"vol1\" seems to be part of an existing JBOV: \".jbov.metadata\" file found")
+}
+
+func TestCanCreateJBOV_failsWhenThereIsAUniqIDFile(t *testing.T) {
+	jbov := givenValidJBOV()
+	givenMountPointsExist(&jbov)
+	defer cleanupMountPoints(&jbov)
+	f, _ := os.Create( filepath.Join(jbov.Volumes["vol1"].LastMountPoint, md.UNIQID_FNAME))
+	f.Close()
+
+	ok, err := CanCreateJBOV(&jbov)
+
+	assert.False(t, ok)
+	assert.EqualError(t, err, "Volume mount point for \"vol1\" seems to be part of an existing JBOV: \".jbov.uniqid\" file found")
+}
 
 // utility
 
