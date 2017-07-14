@@ -68,6 +68,10 @@ func CanCreateJBOV(jbov *md.JBOV) (bool, error) {
 		return false, errors.New("JBOV object should be valid")
 	}
 
+	if len(jbov.Deleted) > 0 {
+		return false, errors.New("An about to be created JBOV should not have deleted files")
+	}
+
 	for cname, volume := range jbov.Volumes {
 		stat, err := os.Stat(volume.LastMountPoint)
 		if os.IsNotExist(err) {
@@ -83,6 +87,9 @@ func CanCreateJBOV(jbov *md.JBOV) (bool, error) {
 		_ , err = os.Stat(filepath.Join(volume.LastMountPoint, md.UNIQID_FNAME))
 		if err == nil {
 			return false, errors.New(fmt.Sprintf("Volume mount point for \"%s\" seems to be part of an existing JBOV: \"%s\" file found", cname, md.UNIQID_FNAME))
+		}
+		if volume.Deprecated {
+			return false, errors.New(fmt.Sprintf("An about to be created JBOV should not start with a deprecated volume: %s", cname))
 		}
 	}
 

@@ -187,6 +187,32 @@ func TestCanCreateJBOV_failsWhenThereIsAUniqIDFile(t *testing.T) {
 	assert.EqualError(t, err, "Volume mount point for \"vol1\" seems to be part of an existing JBOV: \".jbov.uniqid\" file found")
 }
 
+func TestCanCreateJBOV_ShouldNotHaveDeletedFiles(t *testing.T) {
+	jbov := givenValidJBOV()
+	jbov.Deleted = make(map[string]*md.Deleted)
+	jbov.Deleted["a/path"] = &md.Deleted{Ts: 123}
+
+	ok, err := CanCreateJBOV(&jbov)
+
+	assert.False(t, ok)
+	assert.EqualError(t, err, "An about to be created JBOV should not have deleted files")
+}
+
+func TestCanCreateJBOV_shouldNotStartWithDeprecatedVolumes(t *testing.T) {
+	jbov := givenValidJBOV()
+	givenMountPointsExist(&jbov)
+	defer cleanupMountPoints(&jbov)
+	jbov.Volumes["vol1"].Deprecated = true
+
+	ok, err := CanCreateJBOV(&jbov)
+
+	assert.False(t, ok)
+	assert.EqualError(t, err, "An about to be created JBOV should not start with a deprecated volume: vol1")
+}
+
+//
+
+
 // utility
 
 func givenValidJBOV() md.JBOV {
